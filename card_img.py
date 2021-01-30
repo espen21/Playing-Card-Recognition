@@ -16,8 +16,9 @@ Note: The recognition method is not very robust; please see SIFT / SURF for a go
 
 import sys
 import numpy as np
-sys.path.insert(0, "/usr/local/lib/python2.7/site-packages/") 
+#sys.path.insert(0, "/usr/local/lib/python2.7/site-packages/") 
 import cv2
+import os
 
 
 ###############################################################################
@@ -90,52 +91,59 @@ def getCards(im, numcards=4):
     
     yield warp
 
-
+import csv
+def trim_open_csv(path):
+      reader = csv.reader(open(path , "rt",encoding= 'utf-8'), delimiter=",")
+      x = list(reader)
+      
+      del (reader)
+      #gc.collect()
+      return x    
 def get_training(training_labels_filename,training_image_filename,num_training_cards,avoid_cards=None):
   training = {}
   
   labels = {}
-  for line in file(training_labels_filename): 
-    key, num, suit = line.strip().split()
+  s = trim_open_csv(training_labels_filename)
+  for line in s: 
+    line =line[0].split("\t")
+    key, num, suit = line
     labels[int(key)] = (num,suit)
     
-  print "Training"
+  print ("Training")
 
   im = cv2.imread(training_image_filename)
   for i,c in enumerate(getCards(im,num_training_cards)):
     if avoid_cards is None or (labels[i][0] not in avoid_cards[0] and labels[i][1] not in avoid_cards[1]):
       training[i] = (labels[i], preprocess(c))
   
-  print "Done training"
+  print ("Done training")
   return training
   
 
 if __name__ == '__main__':
-  if len(sys.argv) == 6:
-    filename = sys.argv[1]
-    num_cards = int(sys.argv[2])
-    training_image_filename = sys.argv[3]
-    training_labels_filename = sys.argv[4]    
-    num_training_cards = int(sys.argv[5])
-    
-    training = get_training(training_labels_filename,training_image_filename,num_training_cards)
+  #paths "D:\\GITHUB REPOS\\Playing-Card-Recognition\\"
+  filename = "test.jpg"
+  num_cards = 4
+  training_image_filename = "train.png"
+  training_labels_filename =  "train.tsv"  
+  num_training_cards = 52
+  
+  training = get_training(training_labels_filename,training_image_filename,num_training_cards)
 
-    im = cv2.imread(filename)
-    
-    width = im.shape[0]
-    height = im.shape[1]
-    if width < height:
-      im = cv2.transpose(im)
-      im = cv2.flip(im,1)
+  im = cv2.imread(filename)
+  
+  width = im.shape[0]
+  height = im.shape[1]
+  if width < height:
+    im = cv2.transpose(im)
+    im = cv2.flip(im,1)
 
-    # Debug: uncomment to see registered images
-    # for i,c in enumerate(getCards(im,num_cards)):
-    #   card = find_closest_card(training,c,)
-    #   cv2.imshow(str(card),c)
-    # cv2.waitKey(0) 
+  # Debug: uncomment to see registered images
+  # for i,c in enumerate(getCards(im,num_cards)):
+  #   card = find_closest_card(training,c,)
+  #   cv2.imshow(str(card),c)
+  # cv2.waitKey(0) 
+  
+  cards = [find_closest_card(training,c) for c in getCards(im,num_cards)]
+  print (cards)
     
-    cards = [find_closest_card(training,c) for c in getCards(im,num_cards)]
-    print cards
-    
-  else:
-    print __doc__
